@@ -1,0 +1,4 @@
+{
+   "prompt": "Human: tell me a joke" "\\nAssistant:",
+   "max_token_to_sample": 300
+}

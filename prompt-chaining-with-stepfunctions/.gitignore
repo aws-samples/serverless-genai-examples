@@ -1,0 +1,40 @@
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+samconfig.toml
+.aws-sam
+output.txt
+response.json
+package-lock.json
+
+# End of https://www.gitignore.io/api/osx,node,linux,windows
+
+# Environments
+.env
+.venv
+env/
+venv/
+.gitkeep
+# CDK
+cdk.out
+.DS_Store
+
+# Intellij
+.idea
+conversation-bot
+llm-leaderboard
+*.pyc
+**/build*
+**/.terraform*
+**/terraform.tfstate*
+**/__pycache__
+lambda_function_payload.zip

@@ -1,17 +1,22 @@
-## My Project
+# GenAI examples using serverless
 
-TODO: Fill this README out!
+This repository contains examples of genAI applications using AWS serverless services.
 
-Be sure to:
+## Contents
 
-* Change the title in this README
-* Edit your repository description on GitHub
+1. About this repo
+2. Examples
+3. Learning Resources
+4. License
 
-## Security
+## About this repo
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+This repo contains code examples of different genAI applications that can be deployed using serverless services.
+
+We welcome contributions to this repo - see [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## Examples
 
 ## License
 
 This library is licensed under the MIT-0 License. See the LICENSE file.
-

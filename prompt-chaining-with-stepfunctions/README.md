@@ -1,7 +1,7 @@
-# prompt_chaining_blog
+# Prompt Chaining with Human in the loop
 
 This sample project supports the [blog]()
-Refer the blog to understand the overall application architecture and technical concepts
+Refer to the blog to understand the overall application architecture and technical concepts
 
 ## Getting started
 
@@ -20,7 +20,7 @@ Add your email address in [variable.tf](stack/terraform/variables.tf) or enter t
 ### Deploy
 
 ```bash
-git clone <repo>
+git clone https://github.com/aws-samples/serverless-genai-examples
 cd prompt-chaining-human-in-the-loop/stack/terraform
 terraform init
 terraform apply
@@ -39,6 +39,7 @@ Once deployed, confirm the subscription through the email received in the email 
   "review_text": "The item broke in 2 days"
 }
 ```
+### considerations
 
 ### cleanup
 

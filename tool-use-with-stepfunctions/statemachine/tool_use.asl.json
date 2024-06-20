@@ -47,14 +47,19 @@
           "messages.$": "$.messages"
         }
       },
-      "Next": "Choice"
+      "ResultSelector": {
+        "contents.$": "$.Body.content",
+        "stopReason.$": "$.Body.stop_reason" 
+      },
+      "ResultPath": "$.llmResponse",
+      "Next": "Is Tool Use?"
     },
-    "Choice": {
+    "Is Tool Use?": {
       "Type": "Choice",
       "Default": "Success",
       "Choices": [
         {
-          "Variable": "$.Body.stop_reason",
+          "Variable": "$.llmResponse.stopReason",
           "StringEquals": "tool_use",
           "Next": "CollectToolNames"
         }
@@ -63,9 +68,10 @@
     "CollectToolNames": {
       "Type": "Pass",
       "Next": "CheckToolNames?",
-      "InputPath": "$.Body",
+      "InputPath": "$.llmResponse",
       "Parameters": {
-        "names.$": "$.content[*].name"
+        "names.$": "$.contents[*].name",
+        "toolIds.$": "$.contents[*].id"
       },
       "ResultPath": "$.tools"
     },
@@ -88,10 +94,17 @@
     "ScheduleAppointmentToolFunction": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
+      "InputPath": "$.llmResponse.contents[?(@.type==tool_use && @.name==schedule_appointment)]",
       "Parameters": {
-        "Payload.$": "$",
-        "FunctionName": "${ScheduleAppointmentFunctionArn}"
+        "FunctionName": "${ScheduleAppointmentFunctionArn}",
+        "Payload": {
+          "input.$": "$[0].input"
+        }
       },
+      "ResultSelector": {
+        "message.$": "States.JsonToString($.Payload)"
+      },
+      "ResultPath": "$.result",
       "Retry": [
         {
           "ErrorEquals": [
@@ -105,18 +118,22 @@
           "BackoffRate": 2
         }
       ],
-      "Next": "ReconcileMessages",
-      "ResultSelector": {
-        "messages.$": "$.Payload"
-      }
+      "Next": "PrepareMessages"
     },
     "CheckInventoryToolFunction": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
+      "InputPath": "$.llmResponse.contents[?(@.type==tool_use && @.name==check_inventory)]",
       "Parameters": {
-        "Payload.$": "$",
-        "FunctionName": "${CheckInventoryFunctionArn}"
+        "FunctionName": "${CheckInventoryFunctionArn}",
+        "Payload": {
+          "input.$": "$[0].input"
+        }
       },
+      "ResultSelector": {
+        "message.$": "States.JsonToString($.Payload)"
+      },
+      "ResultPath": "$.result",
       "Retry": [
         {
           "ErrorEquals": [
@@ -130,18 +147,34 @@
           "BackoffRate": 2
         }
       ],
+      "Next": "PrepareMessages"
+    },
+    "PrepareMessages": {
+      "Type": "Pass",
       "Next": "ReconcileMessages",
-      "ResultSelector": {
-        "messages.$": "$.Payload"
+      "Parameters": {
+        "userInput.$": "$$.Execution.Input.messages[0]",
+        "assistantMessage": {"role": "assistant", "content.$": "$.llmResponse.contents"},
+        "toolResponse": {
+          "role": "user", 
+          "content": [{
+            "type": "tool_result",
+            "tool_use_id.$": "$.tools.toolIds[0]",
+            "content": [{
+              "type": "text", 
+              "text.$": "$.result.message"
+            }]
+          }]
+        }
       }
     },
     "ReconcileMessages": {
       "Type": "Pass",
       "Next": "Bedrock InvokeModel",
       "Parameters": {
-        "messages.$": "States.Array($$.Execution.Input.messages[0], $.messages[0], $.messages[1])"
+        "messages.$": "States.Array($.userInput, $.assistantMessage, $.toolResponse)"
       }
-    },
+    },    
     "Success": {
       "Type": "Succeed"
     },

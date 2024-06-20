@@ -6,14 +6,14 @@
       "Type": "Task",
       "Resource": "arn:aws:states:::bedrock:invokeModel",
       "Parameters": {
-        "ModelId": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0",
+        "ModelId": "${BedrockModelId}",
         "Body": {
           "anthropic_version": "bedrock-2023-05-31",
           "max_tokens": 1024,
           "tools": [
             {
               "name": "check_inventory",
-              "description": "Check the inventory for tire of provided specification is present in store",
+              "description": "Check the inventory for parts matching the provided specification is present in store",
               "input_schema": {
                 "type": "object",
                 "properties": {
@@ -27,7 +27,7 @@
             },
             {
               "name": "schedule_appointment",
-              "description": "Schedule an appointment with the tire shop if and only if inventory is present.",
+              "description": "Schedule an appointment with the tire shop if and only if inventory is available.",
               "input_schema": {
                 "type": "object",
                 "properties": {

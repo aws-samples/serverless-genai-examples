@@ -13,6 +13,8 @@ You will understand this better with an example.
 
 ## Car repair shop example
 
+### Sequence diagram
+![Tool Use for Car shop](assets/tool-use.png)
 
 ## Deploy the sample application
 

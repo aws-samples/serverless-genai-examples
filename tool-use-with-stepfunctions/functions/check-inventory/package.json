@@ -1,0 +1,10 @@
+{
+  "name": "check_inventory",
+  "version": "1.0.0",
+  "description": "Check inventory of car parts",
+  "main": "app.js",
+  "repository": "TODO",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {}
+}

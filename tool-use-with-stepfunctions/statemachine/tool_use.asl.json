@@ -1,0 +1,156 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Bedrock InvokeModel",
+  "States": {
+    "Bedrock InvokeModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::bedrock:invokeModel",
+      "Parameters": {
+        "ModelId": "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0",
+        "Body": {
+          "anthropic_version": "bedrock-2023-05-31",
+          "max_tokens": 1024,
+          "tools": [
+            {
+              "name": "check_inventory",
+              "description": "Check the inventory for tire of provided specification is present in store",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "carModel": {
+                    "type": "string",
+                    "description": "The model of the car, e.g. Audi A7, Honda Accord"
+                  }
+                },
+                "required": ["carModel"]
+              }
+            },
+            {
+              "name": "schedule_appointment",
+              "description": "Schedule an appointment with the tire shop if and only if inventory is present.",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "appointmentType": {
+                    "type": "string",
+                    "description": "The type of appointment, e.g. tire change, engine oil change, rotation, wheel alignment"
+                  },
+                  "carModel": {
+                    "type": "string",
+                    "description": "The model of the car, e.g. Audi A7, Honda Accord, Tesla Model Y"
+                  }
+                },
+                "required": ["appointmentType", "carModel"]
+              }
+            }
+          ],
+          "messages.$": "$.messages"
+        }
+      },
+      "Next": "Choice"
+    },
+    "Choice": {
+      "Type": "Choice",
+      "Default": "Success",
+      "Choices": [
+        {
+          "Variable": "$.Body.stop_reason",
+          "StringEquals": "tool_use",
+          "Next": "CollectToolNames"
+        }
+      ]
+    },
+    "CollectToolNames": {
+      "Type": "Pass",
+      "Next": "CheckToolNames?",
+      "InputPath": "$.Body",
+      "Parameters": {
+        "names.$": "$.content[*].name"
+      },
+      "ResultPath": "$.tools"
+    },
+    "CheckToolNames?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.tools.names[0]",
+          "StringMatches": "check_inventory",
+          "Next": "CheckInventoryToolFunction"
+        },
+        {
+          "Variable": "$.tools.names[0]",
+          "StringMatches": "schedule_appointment",
+          "Next": "ScheduleAppointmentToolFunction"
+        }
+      ],
+      "Default": "ToolNotSupported"
+    },
+    "ScheduleAppointmentToolFunction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${ScheduleAppointmentFunctionArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "ReconcileMessages",
+      "ResultSelector": {
+        "messages.$": "$.Payload"
+      }
+    },
+    "CheckInventoryToolFunction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${CheckInventoryFunctionArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "ReconcileMessages",
+      "ResultSelector": {
+        "messages.$": "$.Payload"
+      }
+    },
+    "ReconcileMessages": {
+      "Type": "Pass",
+      "Next": "Bedrock InvokeModel",
+      "Parameters": {
+        "messages.$": "States.Array($$.Execution.Input.messages[0], $.messages[0], $.messages[1])"
+      }
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "ToolNotSupported": {
+      "Type": "Pass",
+      "Next": "Fail"
+    },
+    "Fail": {
+      "Type": "Fail"
+    }
+  }
+}

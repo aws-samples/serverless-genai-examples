@@ -1,0 +1,10 @@
+{
+  "name": "schedule_appointment",
+  "version": "1.0.0",
+  "description": "Schedule an appointment for car parts.",
+  "main": "app.js",
+  "repository": "TODO",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {}
+}

@@ -19,9 +19,12 @@ We welcome contributions to this repo - see [CONTRIBUTING](CONTRIBUTING.md#secur
 - [**Prompt chaining with human in the loop**](./prompt-chaining-with-stepfunctions/README.md)
 This example demonstrate the use of prompt chaining to decompose bulk and inefficient prompt in to smaller prompts and using purpose built models. Example also shows how to include a human feedback loop when you need to improve the safety and accurancy of the application. 
 
+- [**Tool use or Function calling example**](./tool-use-with-stepfunctions/README.md)
+This example uses Anthropic's Claude Haiku model to show how [Tool use or Function calling](https://docs.anthropic.com/en/docs/build-with-claude/tool-use) can be achieved with Step Functions. [Amazon Bedrock supports tool use](https://docs.aws.amazon.com/bedrock/latest/userguide/tool-use.html) with Bedrock's `Converse` API, however, this mechanism can also be used with basic inference operations like Bedrock's `InvokeModel` or `InvokeWithResponseStreaming`. Tool use is a step above using Agents where the LLM figures out a tool to use bute delegates the responsibility to the user to make use of it. This drastically reduces latency, token size, and deterministic characteristic of LLM responses. 
+
 ## Learning resources
-[Serverless patterns](https://serverlessland.com/patterns)
-[Serverless workflows](https://serverlessland.com/workflows)
+- [Serverless patterns](https://serverlessland.com/patterns)
+- [Serverless workflows](https://serverlessland.com/workflows)
 
 ## License
 

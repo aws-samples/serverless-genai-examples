@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: tool-use-with-stepfunctions
+
+Parameters:
+  BedrockModelId:
+    Type: String
+    Default: "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
+
+Resources:
+  ToolUseStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/tool_use.asl.json
+      DefinitionSubstitutions:
+        ScheduleAppointmentFunctionArn: !GetAtt ScheduleAppointmentFunction.Arn
+        CheckInventoryFunctionArn: !GetAtt CheckInventoryFunction.Arn
+        BedrockModelId: !Ref BedrockModelId
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CheckInventoryFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ScheduleAppointmentFunction
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !Ref BedrockModelId
+
+  CheckInventoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/check-inventory/
+      Handler: app.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+
+  ScheduleAppointmentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/schedule-appointment/
+      Handler: app.handler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+
+Outputs:
+  ToolUseStateMachineArn:
+    Description: "Tool Use state machine ARN"
+    Value: !Ref ToolUseStateMachine
+  ToolUseStateMachineRole:
+    Description: "IAM Role created for Tool Use state machine based on the specified SAM Policy Templates"
+    Value: !GetAtt ToolUseStateMachineRole.Arn

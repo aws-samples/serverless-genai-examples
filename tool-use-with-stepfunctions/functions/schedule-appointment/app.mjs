@@ -1,5 +1,5 @@
 export const handler = async (event) => {
-  const { appointmentType, carModel } = event;
+  const { appointmentType, carModel } = event.input;
 
   let tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

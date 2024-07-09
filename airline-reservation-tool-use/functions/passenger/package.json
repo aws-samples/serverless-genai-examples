@@ -1,0 +1,10 @@
+{
+  "name": "passenger",
+  "version": "1.0.0",
+  "description": "Passengers of an owner",
+  "main": "app.js",
+  "repository": "TODO",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {}
+}

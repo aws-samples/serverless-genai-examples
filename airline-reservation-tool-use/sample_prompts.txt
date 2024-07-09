@@ -1,0 +1,4 @@
+Mr. John Doe (OwnerId: 9612f6c4-b7ff-4d82-b113-7b605e188ed9) will be traveling to Disney World in 5 hours with his family. I will need to book a reservation for them.
+Mr. John Doe (OwnerId: 9612f6c4-b7ff-4d82-b113-7b605e188ed9) will be traveling to Masters Tournament in 2 days with his older daughter. I will need to book a reservation for them.
+Mr. John Doe (OwnerId: 9612f6c4-b7ff-4d82-b113-7b605e188ed9) will be traveling by himself to re:Invent 2024. I will need to book a reservation for them.
+Mr. John Doe (OwnerId: 9612f6c4-b7ff-4d82-b113-7b605e188ed9) will be traveling by himself to re:Invent 2024 on Nov 30. I will need to book a reservation for him.

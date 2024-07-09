@@ -1,2 +1,4 @@
 tool-use-with-stepfunctions/samconfig.toml
 tool-use-with-stepfunctions/.aws-sam
+airline-reservation-tool-use/samconfig.toml
+airline-reservation-tool-use/.aws-sam

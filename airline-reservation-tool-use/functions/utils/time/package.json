@@ -1,0 +1,12 @@
+{
+  "name": "time_util",
+  "version": "1.0.0",
+  "description": "time utility",
+  "main": "app.js",
+  "repository": "TODO",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {
+    "moment": "2.30.1"
+  }
+}

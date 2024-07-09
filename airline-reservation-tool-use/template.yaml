@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: airline-reservation-tool-use
+
+Mappings:
+  Model:
+    Id:
+      Value: "arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+    SystemPrompt: 
+      Value: >
+        You are an AI assistant that helps owners book their private jets. You will be given minimal information from owner conversation. 
+        Your job is to interpolate that minimal information and extract as much as possible. 
+        You will also need to handle the case where dates needs to be understood and converted to Zulu format. 
+        For example: '5 days from now' should be converted to a appropriate date format string that can be parsed appropriately. 
+        You also need to understand and provide IATA airport codes like KCMH, KJFK, etc when airports are mentioned.
+        You will also need to find out nearest airport with the reference to the locations used. 
+        For example: 'I will be flying from the big apple to London leaving after 3pm' should be interpolated as JFK to be the departure airport.
+
+Resources:
+  ReservationStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/book_reservation.asl.json
+      DefinitionSubstitutions:
+        GetOwnerInfoFunctionArn: !GetAtt GetOwnerInfoFunction.Arn
+        BookReservationFunctionArn: !GetAtt BookReservationFunction.Arn
+        GetPassengersFunctionArn: !GetAtt GetPassengersFunction.Arn
+        GetDateTimeFunctionArn: !GetAtt GetDateTimeFunction.Arn
+        BedrockModelId: !FindInMap ["Model", "Id", "Value"]
+        SystemPrompt: !FindInMap ["Model", "SystemPrompt", "Value"]
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetOwnerInfoFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetPassengersFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref BookReservationFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetDateTimeFunction                        
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !FindInMap ["Model", "Id", "Value"]
+
+  GetOwnerInfoFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/customer/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+
+  GetPassengersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/passenger/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+
+  BookReservationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/reservation/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+  
+  GetDateTimeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/utils/time/
+      Handler: app.lambdaHandler
+      Runtime: nodejs20.x
+      Architectures:
+        - arm64
+
+Outputs:
+  ReservationStateMachineArn:
+    Description: "Reservation state machine ARN"
+    Value: !Ref ReservationStateMachine

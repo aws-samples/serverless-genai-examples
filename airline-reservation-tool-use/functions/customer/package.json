@@ -1,0 +1,10 @@
+{
+  "name": "customer",
+  "version": "1.0.0",
+  "description": "Customers",
+  "main": "app.js",
+  "repository": "TODO",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {}
+}

@@ -1,0 +1,10 @@
+{
+  "name": "reservation",
+  "version": "1.0.0",
+  "description": "Create reservation for owner and passengers",
+  "main": "app.js",
+  "repository": "TODO",
+  "author": "SAM CLI",
+  "license": "MIT",
+  "dependencies": {}
+}

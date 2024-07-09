@@ -1,0 +1,297 @@
+{
+  "Comment": "A state machine to book reservation for private jets",
+  "TimeoutSeconds": 60,
+  "StartAt": "TodayDateTimeFunction",
+  "States": {
+    "TodayDateTimeFunction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${GetDateTimeFunctionArn}",
+        "Payload": {
+          "input.$": "$.content"
+        }
+      },
+      "ResultSelector": {
+        "messages": [{
+          "role": "user",
+          "content.$": "$.Payload"
+        }]
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "Bedrock InvokeModel"
+    },
+    "Bedrock InvokeModel": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::bedrock:invokeModel",
+      "TimeoutSeconds": 60,
+      "Parameters": {
+        "ModelId": "${BedrockModelId}",
+        "Body": {
+          "anthropic_version": "bedrock-2023-05-31",
+          "max_tokens": 1024,
+          "system": "${SystemPrompt}",
+          "tools": [
+            {
+              "name": "get_owner_info",
+              "description": "Take the ownerId and provide the detailed information of the owner including their home aiport, first name, and last name.",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "The owner id is in UUID format, e.g. abcd-1234-efgh-5678-pqrs"
+                  }
+                },
+                "required": ["ownerId"]
+              }
+            },
+            {
+              "name": "get_passengers",
+              "description": "Based on the owner id and the input prompt, find all the passengers that will be flying along with the owner. Family members, business partners, or self",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "The owner id in UUID format, e.g. abcd-1234-efgh-5678"
+                  }
+                },
+                "required": ["ownerId"]
+              }
+            },
+            {
+              "name": "book_reservation",
+              "description": "Once all the information around to and from airport, passengers, date of travel, etc is decided then go ahead with booking the reservation.",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "ownerId": {
+                    "type": "string",
+                    "description": "The owner id in UUID format, e.g. abcd-1234-efgh-5678"
+                  },
+                  "firstname": {
+                    "type": "string",
+                    "description": "The firstname of the owner"
+                  },
+                  "lastname": {
+                    "type": "string",
+                    "description": "The lastname of the owner"
+                  },
+                  "date": {
+                    "type": "string",
+                    "description": "The date and time of departure from departure airport."
+                  },
+                  "from": {
+                    "type": "string",
+                    "description": "The departure airport code in IATA format, e.g. KJFK, KCMH, KBOS, etc"
+                  },
+                  "to": {
+                    "type": "string",
+                    "description": "The arrival airport code in IATA format, e.g. KJFK, KCMH, KBOS, etc"
+                  },
+                  "passengers": {
+                    "type": "array",
+                    "description": "The list of passengers that will be accompanying the owner in this trip."
+                  }
+                },
+                "required": ["ownerId", "firstname", "lastname", "date", "from", "to", "passengers"]
+              }
+            }
+          ],
+          "messages.$": "$.messages"
+        }
+      },
+      "ResultSelector": {
+        "contents.$": "$.Body.content",
+        "stopReason.$": "$.Body.stop_reason"
+      },
+      "ResultPath": "$.llmResponse",
+      "Next": "Is Tool Use?"
+    },
+    "Is Tool Use?": {
+      "Type": "Choice",
+      "Default": "Success",
+      "Choices": [
+        {
+          "Variable": "$.llmResponse.stopReason",
+          "StringEquals": "tool_use",
+          "Next": "CollectToolNames"
+        }
+      ]
+    },
+    "CollectToolNames": {
+      "Type": "Pass",
+      "Next": "CheckToolNames?",
+      "InputPath": "$.llmResponse",
+      "Parameters": {
+        "names.$": "$.contents[*].name",
+        "toolIds.$": "$.contents[*].id"
+      },
+      "ResultPath": "$.tools"
+    },
+    "CheckToolNames?": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.tools.names[0]",
+          "StringMatches": "get_owner_info",
+          "Next": "GetOwnerInfoFunction"
+        },
+        {
+          "Variable": "$.tools.names[0]",
+          "StringMatches": "get_passengers",
+          "Next": "GetPassengersFunction"
+        },
+        {
+          "Variable": "$.tools.names[0]",
+          "StringMatches": "book_reservation",
+          "Next": "BookReservationFunction"
+        }
+      ],
+      "Default": "ToolNotSupported"
+    },
+    "GetPassengersFunction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "InputPath": "$.llmResponse.contents[?(@.type==tool_use && @.name==get_passengers)]",
+      "Parameters": {
+        "FunctionName": "${GetPassengersFunctionArn}",
+        "Payload": {
+          "input.$": "$[0].input"
+        }
+      },
+      "ResultSelector": {
+        "message.$": "$.Payload"
+      },
+      "ResultPath": "$.result",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "PrepareMessages"
+    },
+    "GetOwnerInfoFunction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "InputPath": "$.llmResponse.contents[?(@.type==tool_use && @.name==get_owner_info)]",
+      "Parameters": {
+        "FunctionName": "${GetOwnerInfoFunctionArn}",
+        "Payload": {
+          "input.$": "$[0].input"
+        }
+      },
+      "ResultSelector": {
+        "message.$": "$.Payload"
+      },
+      "ResultPath": "$.result",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "PrepareMessages"
+    },
+    "BookReservationFunction": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "InputPath": "$.llmResponse.contents[?(@.type==tool_use && @.name==book_reservation)]",
+      "Parameters": {
+        "FunctionName": "${BookReservationFunctionArn}",
+        "Payload": {
+          "input.$": "$[0].input"
+        }
+      },
+      "ResultSelector": {
+        "message.$": "$.Payload"
+      },
+      "ResultPath": "$.result",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "PrepareMessages"
+    },
+    "PrepareMessages": {
+      "Type": "Pass",
+      "Next": "ReconcileMessages",
+      "Parameters": {
+        "userInput.$": "$.messages[0]",
+        "assistantMessage": {
+          "role": "assistant",
+          "content.$": "$.llmResponse.contents"
+        },
+        "toolResponse": {
+          "role": "user",
+          "content": [
+            {
+              "type": "tool_result",
+              "tool_use_id.$": "$.tools.toolIds[0]",
+              "content": [
+                {
+                  "type": "text",
+                  "text.$": "$.result.message.body"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "ReconcileMessages": {
+      "Type": "Pass",
+      "Next": "Bedrock InvokeModel",
+      "Parameters": {
+        "messages.$": "States.Array($.userInput, $.assistantMessage, $.toolResponse)"
+      }
+    },
+    "Success": {
+      "Type": "Succeed"
+    },
+    "ToolNotSupported": {
+      "Type": "Pass",
+      "Next": "Fail"
+    },
+    "Fail": {
+      "Type": "Fail"
+    }
+  }
+}

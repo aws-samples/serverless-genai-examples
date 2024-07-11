@@ -12,9 +12,9 @@ Mappings:
         Your job is to interpolate that minimal information and extract as much as possible. 
         You will also need to handle the case where dates needs to be understood and converted to Zulu format. 
         For example: '5 days from now' should be converted to a appropriate date format string that can be parsed appropriately. 
-        You also need to understand and provide IATA airport codes like KCMH, KJFK, etc when airports are mentioned.
+        You also need to understand and provide ICAO airport codes like KCMH, KJFK, etc when airports are mentioned.
         You will also need to find out nearest airport with the reference to the locations used. 
-        For example: 'I will be flying from the big apple to London leaving after 3pm' should be interpolated as JFK to be the departure airport.
+        For example: 'I will be flying from the big apple to London leaving after 3pm' should be interpolated as KJFK to be the departure airport.
 
 Resources:
   ReservationStateMachine:

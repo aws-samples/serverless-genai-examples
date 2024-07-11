@@ -8,21 +8,21 @@ export const lambdaHandler = async (event, context) => {
         {
           'firstname': 'Jill',
           'lastname': 'Doe',
-          'homeAirport': 'JFK',
+          'homeAirport': 'KJFK',
           'ownerRelationship': 'Wife',
           'age': '39'
         },
         {
           'firstname': 'Jane',
           'lastname': 'Doe',
-          'homeAirport': 'ORD',
+          'homeAirport': 'KORD',
           'ownerRelationship': 'Daughter',
           'age': '20'
         },
         {
           'firstname': 'Jenny',
           'lastname': 'Doe',
-          'homeAirport': 'CMH',
+          'homeAirport': 'KCMH',
           'ownerRelationship': 'Daughter',
           'age': '24'
         }

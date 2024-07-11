@@ -6,7 +6,7 @@ export const lambdaHandler = async (event, context) => {
       'id': 1234,
       'firstname': 'John',
       'lastname': 'Doe',
-      'homeAirport': 'JFK'
+      'homeAirport': 'KJFK'
     })
   }
 };

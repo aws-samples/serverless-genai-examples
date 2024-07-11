@@ -96,11 +96,11 @@
                   },
                   "from": {
                     "type": "string",
-                    "description": "The departure airport code in IATA format, e.g. KJFK, KCMH, KBOS, etc"
+                    "description": "The departure airport code in ICAO format, e.g. KJFK, KCMH, KBOS, etc"
                   },
                   "to": {
                     "type": "string",
-                    "description": "The arrival airport code in IATA format, e.g. KJFK, KCMH, KBOS, etc"
+                    "description": "The arrival airport code in ICAO format, e.g. KJFK, KCMH, KBOS, etc"
                   },
                   "passengers": {
                     "type": "array",

@@ -11,7 +11,7 @@ With tool use, LLMs can integrate with existing business logic and create some k
 
 ## Deploy the sample application
 
-To deploy this application, you need the following tools. You will also need access to Claude 3 Sonnet model in Bedrock. 
+To deploy this application, you need the following tools. You will also need access to Claude 3 Sonnet and Amazon Nova Pro models in Bedrock. 
 You can follow [this model access user guide](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html) to gain access.
 
 * SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)

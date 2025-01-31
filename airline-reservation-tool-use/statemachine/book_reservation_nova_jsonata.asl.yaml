@@ -1,0 +1,225 @@
+---
+Comment: A state machine to book reservation for private jets
+TimeoutSeconds: 60
+QueryLanguage: JSONata
+StartAt: CurrentDateTime
+States:
+  CurrentDateTime:
+    Type: Pass
+    Assign:
+      currentDateTime: >-
+        {%
+          (
+            $date := $fromMillis($millis(), '[FNn], [D1o] [MNn] [Y0001] [h#1]:[m01]:[s01] [P]');
+            'Current date and time is ' & $date & ' UTC.'
+          )           
+        %}
+    Output:
+      messages:
+      - role: user
+        content:
+        - text: >-
+            {%
+              (
+                $date := $fromMillis($millis(), '[FNn], [D1o] [MNn] [Y0001] [h#1]:[m01]:[s01] [P]');
+                $prompt := $states.context.Execution.Input.content[0].text;
+
+                'Current date and time is ' & $date & ' UTC. ' & $prompt
+              )           
+            %}
+    Next: Bedrock InvokeModel
+  Bedrock InvokeModel:
+    Type: Task
+    Resource: arn:aws:states:::bedrock:invokeModel
+    TimeoutSeconds: 60
+    Arguments:
+      ModelId: "${BedrockModelId}"
+      Body:
+        messages: "{% $states.input.messages %}"
+        system:
+        - text: "${SystemPrompt}"
+        inferenceConfig:
+          max_new_tokens: 1024
+          temperature: 0.00001
+          top_p: 0
+        toolConfig:
+          toolChoice:
+            auto: {}
+          tools:
+          - toolSpec:
+              name: get_owner_info
+              description: Take the ownerId and provide the detailed information of
+                the owner including their home airport, first name, and last name.
+              inputSchema:
+                type: object
+                properties:
+                  ownerId:
+                    type: string
+                    description: The owner id is in UUID format, e.g. abcd-1234-efgh-5678-pqrs
+                required:
+                - ownerId
+          - toolSpec:
+              name: get_passengers
+              description: Based on the owner id and the input prompt, find all the
+                passengers that will be flying along with the owner. Family members,
+                business partners, or self
+              inputSchema:
+                type: object
+                properties:
+                  ownerId:
+                    type: string
+                    description: The owner id in UUID format, e.g. abcd-1234-efgh-5678
+                required:
+                - ownerId
+          - toolSpec:
+              name: book_reservation
+              description: Once all the information around to and from airport, passengers,
+                date of travel, etc is decided then go ahead with booking the reservation.
+              inputSchema:
+                type: object
+                properties:
+                  ownerId:
+                    type: string
+                    description: The owner id in UUID format, e.g. abcd-1234-efgh-5678
+                  firstname:
+                    type: string
+                    description: The firstname of the owner
+                  lastname:
+                    type: string
+                    description: The lastname of the owner
+                  date:
+                    type: string
+                    description: The date and time of departure from departure airport (from).
+                  from:
+                    type: string
+                    description: The departure airport code in ICAO format, e.g. KJFK, KCMH, KBOS, etc
+                  to:
+                    type: string
+                    description: The arrival airport code in ICAO format, e.g. KJFK, KCMH, KBOS, etc
+                  passengers:
+                    type: array
+                    description: The list of passengers that will be accompanying the owner in this trip.
+                required:
+                - ownerId
+                - firstname
+                - lastname
+                - date
+                - from
+                - to
+                - passengers
+    Assign:
+      originalUserMessage:
+        - role: user
+          content:
+          - text: "{% $currentDateTime & ' ' & $states.context.Execution.Input.content[0].text %}"
+      llmResponse: >-
+        {%
+          $states.result.Body{
+            'stopReason': stopReason,
+            'content': output.message.content
+          }
+        %}
+    Next: Is Tool Use?
+  Is Tool Use?:
+    Type: Choice
+    Default: Success
+    Choices:
+    - Condition: "{% $llmResponse.stopReason = 'tool_use' %}"
+      Next: CheckToolNames?
+  CheckToolNames?:
+    Type: Choice
+    Choices:
+    - Condition: "{% 'get_owner_info' in $llmResponse.content.toolUse.name  %}"
+      Next: GetOwnerInfoFunction
+    - Condition: "{% 'get_passengers' in $llmResponse.content.toolUse.name %}"
+      Next: GetPassengersFunction
+    - Condition: "{% 'book_reservation' in $llmResponse.content.toolUse.name %}"
+      Next: BookReservationFunction
+    Default: ToolNotSupported
+  GetPassengersFunction:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: "${GetPassengersFunctionArn}"
+      Payload:
+        input: "{% $llmResponse.content.toolUse[name = 'get_passengers'].input %}"
+    Output:
+      message: "{% $states.result.Payload %}"
+      toolUseId: "{% $llmResponse.content.toolUse[name = 'get_passengers'].toolUseId %}"
+    Retry:
+    - ErrorEquals:
+      - Lambda.ServiceException
+      - Lambda.AWSLambdaException
+      - Lambda.SdkClientException
+      - Lambda.TooManyRequestsException
+      IntervalSeconds: 1
+      MaxAttempts: 3
+      BackoffRate: 2
+    Next: PrepareMessages
+  GetOwnerInfoFunction:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: "${GetOwnerInfoFunctionArn}"
+      Payload:
+        input: "{% $llmResponse.content.toolUse[name = 'get_owner_info'].input %}"
+    Output:
+      message: "{% $states.result.Payload %}"
+      toolUseId: "{% $llmResponse.content.toolUse[name = 'get_owner_info'].toolUseId %}"
+    Retry:
+    - ErrorEquals:
+      - Lambda.ServiceException
+      - Lambda.AWSLambdaException
+      - Lambda.SdkClientException
+      - Lambda.TooManyRequestsException
+      IntervalSeconds: 1
+      MaxAttempts: 3
+      BackoffRate: 2
+    Next: PrepareMessages
+  BookReservationFunction:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Arguments:
+      FunctionName: "${BookReservationFunctionArn}"
+      Payload:
+        input: "{% $llmResponse.content.toolUse[name = 'book_reservation'].input %}"
+    Output:
+      message: "{% $states.result.Payload %}"
+      toolUseId: "{% $llmResponse.content.toolUse[name = 'book_reservation'].toolUseId %}"
+    Retry:
+    - ErrorEquals:
+      - Lambda.ServiceException
+      - Lambda.AWSLambdaException
+      - Lambda.SdkClientException
+      - Lambda.TooManyRequestsException
+      IntervalSeconds: 1
+      MaxAttempts: 3
+      BackoffRate: 2
+    Next: PrepareMessages
+  PrepareMessages:
+    Type: Pass
+    Next: ReconcileMessages
+    Output:
+      userInput: "{% $originalUserMessage %}"
+      assistantMessage:
+        role: assistant
+        content: "{% $llmResponse.content %}"
+      toolResponse:
+        role: user
+        content:
+        - toolResult:
+            toolUseId: "{% $states.input.toolUseId %}"
+            content:
+            - text: "{% $states.input.message.body %}"
+  ReconcileMessages:
+    Type: Pass
+    Next: Bedrock InvokeModel
+    Output:
+      messages: "{% $states.input.userInput ~> $append($states.input.assistantMessage) ~> $append($states.input.toolResponse) %}"
+  Success:
+    Type: Succeed
+  ToolNotSupported:
+    Type: Pass
+    Next: Fail
+  Fail:
+    Type: Fail

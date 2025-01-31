@@ -24,9 +24,9 @@ Mappings:
         'I will be flying from the big apple to London leaving after 3pm.'
 
         ### Interpretation\n
-        Departure Airport: KJFK (New York JFK)\n
-        Arrival Airport: EGLL (London Heathrow)\n
-        Departure Time: After 15:00Z (based on the provided 'after 3pm' information)\n
+        Departure Airport (from): KJFK (New York JFK)\n
+        Arrival Airport (to): EGLL (London Heathrow)\n
+        Departure Date (date): 2025-02-03T15:00.00Z (based on the provided 'after 3pm' information)\n
 
         Provide your response immediately without any preamble or additional information.
 
@@ -35,6 +35,33 @@ Resources:
     Type: AWS::Serverless::StateMachine
     Properties:
       DefinitionUri: statemachine/book_reservation.asl.json
+      DefinitionSubstitutions:
+        GetOwnerInfoFunctionArn: !GetAtt GetOwnerInfoFunction.Arn
+        BookReservationFunctionArn: !GetAtt BookReservationFunction.Arn
+        GetPassengersFunctionArn: !GetAtt GetPassengersFunction.Arn
+        GetDateTimeFunctionArn: !GetAtt GetDateTimeFunction.Arn
+        BedrockModelId: !FindInMap ["Model", "Id", "Value"]
+        SystemPrompt: !FindInMap ["Model", "SystemPrompt", "Value"]
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetOwnerInfoFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetPassengersFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref BookReservationFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GetDateTimeFunction                        
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: !FindInMap ["Model", "Id", "Value"]
+
+  NovaJSONataStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/book_reservation_nova_jsonata.asl.yaml
       DefinitionSubstitutions:
         GetOwnerInfoFunctionArn: !GetAtt GetOwnerInfoFunction.Arn
         BookReservationFunctionArn: !GetAtt BookReservationFunction.Arn
@@ -98,3 +125,6 @@ Outputs:
   ReservationStateMachineArn:
     Description: "Reservation state machine ARN"
     Value: !Ref ReservationStateMachine
+  NovaJSONataStateMachineArn:
+    Description: "Nova JSONata state machine ARN"
+    Value: !Ref NovaJSONataStateMachine
